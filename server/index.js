@@ -1,37 +1,22 @@
-
 require('dotenv').config();
 
-
 const express = require('express');
-const app = express(); 
-
-
+const app = express();
 const cors = require('cors');
-
 
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
-
-
-
-
-
-app.use(express.json());
-
-app.use(cors());
-app.use(express.static('public'));
-
 const PORT = process.env.PORT || 3000;
 
+// Middleware para servir os arquivos estáticos e habilitar CORS
+app.use(cors());
+app.use(express.static('public'));
+app.use(express.json());
 
-app.listen(PORT, () => {
-    console.log(`Servidor backend rodando em http://localhost:${PORT}`);
-    console.log(`Acesse seu frontend em: http://localhost:${PORT}/index.html`);
-});
-
+// Rota para iniciar o fluxo de autenticação
 app.get('/login', (req, res) => {
-    const scopes = 'user-read-private user-read-email user-top-read';
-    const redirectUri = 'https://41a250841863.ngrok-free.app'; 
+    const scopes = 'user-read-private user-read-email';
+    const redirectUri = 'https://2d4c6ec33348.ngrok-free.app/callback';
 
     const spotifyAuthUrl = 'https://accounts.spotify.com/authorize' +
         '?response_type=code' +
@@ -42,9 +27,10 @@ app.get('/login', (req, res) => {
     res.redirect(spotifyAuthUrl);
 });
 
-
-app.get('/callback', async (req, res) => { 
+// Rota de callback para receber o código de autorização
+app.get('/callback', async (req, res) => {
     const code = req.query.code || null;
+    const redirectUri = 'https://2d4c6ec33348.ngrok-free.app/callback';
 
     if (code === null) {
         return res.redirect('/error.html');
@@ -52,14 +38,13 @@ app.get('/callback', async (req, res) => {
 
     const authOptions = {
         method: 'POST',
-        url: 'https://accounts.spotify.com/api/token',
         headers: {
             'Authorization': 'Basic ' + (Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET).toString('base64')),
             'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: new URLSearchParams({
             code: code,
-            redirect_uri: 'https://41a250841863.ngrok-free.app',
+            redirect_uri: redirectUri,
             grant_type: 'authorization_code'
         })
     };
@@ -69,18 +54,20 @@ app.get('/callback', async (req, res) => {
         const tokenData = await tokenResponse.json();
 
         if (!tokenResponse.ok) {
-            console.error('Erro ao obter token do Spotify:', tokenData.error_description || 'Erro desconhecido.');
+            console.error('Erro ao obter token do Spotify:', tokenData);
             return res.redirect('/error.html');
         }
 
+        const { access_token } = tokenData;
+        res.redirect(`/index.html?access_token=${access_token}`);
 
-        const { access_token, refresh_token } = tokenData;
-
-        
-        res.redirect('/index.html');
-
-    } catch (error) { 
+    } catch (error) {
         console.error('Erro na rota de callback:', error);
         res.redirect('/error.html');
     }
-}); 
+});
+
+app.listen(PORT, () => {
+    console.log(`Servidor backend rodando em http://localhost:${PORT}`);
+    console.log(`Acesse seu frontend em: http://localhost:${PORT}`);
+});
