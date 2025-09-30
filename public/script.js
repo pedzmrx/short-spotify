@@ -8,7 +8,52 @@ document.addEventListener('DOMContentLoaded', () => {
     const accessToken = urlParams.get('access_token');
     const refreshToken = urlParams.get('refresh_token');
 
-    if (accessToken) {
+    //Função para exibir as músicas na interface
+    const displayTopTracks = (tracks) => {
+        resultsContainer.innerHTML = '';
+        if (tracks.length === 0) {
+            resultsContainer.innerHTML = '<p>Nenhuma música encontrada. Ouça mais para ver seus resultados!</p>';
+            return; 
+        }
+        const tracksHtml = tracks.map(track => {
+            const artistNames = track.artists.map(artist => artist.name).join(', ');
+            return `
+                <div class="track-card">
+                    <img src="${track.album.images[1].url}" alt="Capa do álbum de ${track.name}">
+                    <div class="track-info">
+                        <h3>${track.name}</h3>
+                        <p>por ${artistNames}</p> 
+                    </div>
+                </div>
+            `;
+        }).join('');
+        resultsContainer.innerHTML = tracksHtml; 
+    };
+
+
+    //Função para buscar as músicas mais ouvidas do usuário
+    const fetchTopTracks = async (token) => {
+        const topTracksUrl = 'https://developer.spotify.com/documentation/web-api/concepts/redirect_uri6';
+        try {
+            const response = await fetch(topTracksUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            }); 
+            if (!response.ok) {
+                throw new Error('Erro ao buscar as músicas mais ouvidas.');
+            }
+            const data = await response.json();
+            console.log('Músicas mais ouvidas:', data);
+            displayTopTracks(data.items);
+        } catch (error) {
+            console.error('Erro ao buscar as músicas:', error);
+            resultsContainer.innerHTML = '<p class="error-message">Erro ao carregar as músicas. Tente novamente.</p>';
+        }
+    };
+
+     if (accessToken) {
         console.log('Token de Acesso obtido:', accessToken);
         
         if (loginBtn) {
@@ -29,49 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    const fetchTopTracks = async (token) => {
-        const topTracksUrl = 'https://community.spotify.com/t5/Desktop-Windows/Spotify-Windows-Desktop-Forces-Login-Through-Browser/td-p/5576699';
-        try {
-            const response = await fetch(topTracksUrl, {
-                method: 'GET',
-                headers: {
-                    'Authorization': 'Bearer ' + token
-                }
-            });
-            if (!response.ok) {
-                throw new Error('Erro ao buscar as músicas mais ouvidas.');
-            }
-            const data = await response.json();
-            console.log('Músicas mais ouvidas:', data);
-            displayTopTracks(data.items);
-        } catch (error) {
-            console.error('Erro ao buscar as músicas:', error);
-            resultsContainer.innerHTML = '<p class="error-message">Erro ao carregar as músicas. Tente novamente.</p>';
-        }
-    };
-
-    const displayTopTracks = (tracks) => {
-        resultsContainer.innerHTML = '';
-        if (tracks.length === 0) {
-            resultsContainer.innerHTML = '<p>Nenhuma música encontrada. Ouça mais para ver seus resultados!</p>';
-            return;
-        }
-        const tracksHtml = tracks.map(track => {
-            const artistNames = track.artists.map(artist => artist.name).join(', ');
-            return `
-                <div class="track-card">
-                    <img src="${track.album.images[1].url}" alt="Capa do álbum de ${track.name}">
-                    <div class="track-info">
-                        <h3>${track.name}</h3>
-                        <p>por ${artistNames}</p>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        resultsContainer.innerHTML = tracksHtml;
-    };
     
-    // 4. Lógica Completa do Canvas para a Animação
+    // 5. Animação de Fundo com Partículas
     const canvas = document.getElementById('background-canvas');
     const ctx = canvas.getContext('2d');
     
@@ -109,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    
     function initParticles() {
         particles = [];
         for (let i = 0; i < numParticles; i++) {
